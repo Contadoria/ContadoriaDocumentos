@@ -1,0 +1,185 @@
+<script>
+
+/*
+* Página de configurações, carrega antes de todas as demais
+**/
+
+/*
+* Sempre alterar para false quando for publicar
+**/
+const MODO_DESENVOLVIMENTO = false;
+
+/*
+* Disponibiliza o objeto global da
+* API do Google para uso interno
+* nos componentes como 'this.$google'
+**/
+Vue.prototype.$google = google;
+
+/*
+* Disponibiliza os dados do serviço para os componentes
+**/
+Vue.prototype.$dadosDrive = dadosDrive;
+if (MODO_DESENVOLVIMENTO) {
+    console.log(dadosDrive);
+}
+
+/*
+* Log para depuração 
+**/
+Vue.prototype.$log = function(payload) {
+    if (MODO_DESENVOLVIMENTO) {
+        console.log('*** DEBUG_LOG');
+        console.log(payload);
+    }
+};
+
+/*
+* Define a rotina de tratamento de erros
+* para todos os componentes
+**/
+Vue.prototype.$errorHandler = function (e) {
+    google.script.run.registrarErro(e);
+};
+
+/*
+* Inicia a Vuex store
+**/
+
+Vue.use(Vuex);
+
+const store = new Vuex.Store({
+    strict: MODO_DESENVOLVIMENTO,
+    state: {
+        inicializando: true,
+        falhaInicializacao: false,
+        carregando: false,
+        mostrarAviso: false,
+        mensagemAviso: '',
+        corAviso: '',
+        token: '',
+        developerKey: '',
+        idPastaDestino: '',
+        planilhas: [],
+        modelos: [],
+        identificador: '',
+        opcaoAbrir: true
+    },
+    mutations: {
+        atualizarStatusInicializacao(state, status) {
+            state.inicializando = status;
+        },
+        atualizarFalhaInicializacao(state, status) {
+            state.falhaInicializacao = status;
+        },
+        atualizarStatusCarregando(state, status) {
+            state.carregando = status;
+        },
+        atualizarAviso(state, payload) {
+            state.mostrarAviso = payload.mostrarAviso;
+            state.mensagemAviso = payload.mensagemAviso;
+            state.corAviso = payload.corAviso;
+        },
+        atualizarVisualizacaoAviso(state, val) {
+            state.mostrarAviso = val;
+        },
+        atualizarToken(state, token) {
+            state.token = token;
+        },
+        atualizarDeveloperKey(state, key) {
+            state.developerKey = key;
+        },
+        atualizarIdPastaDestino(state, id) {
+            state.idPastaDestino = id;
+        },
+        atualizarPlanilhas(state, dados) {
+            state.planilhas = dados;
+        },
+        atualizarModelos(state, dados) {
+            state.modelos = dados;
+        },
+        atualizarIdentificador(state, identificador) {
+            state.identificador = identificador;
+        },
+        atualizarOpcaoAbrir(state, opcao) {
+            state.opcaoAbrir = opcao;
+        }
+    },
+    actions: {
+        inicializar(context, dados) {
+            var nome = Array.isArray(dados.planilhas) && dados.planilhas[0] && dados.planilhas[0].title 
+            ? dados.planilhas[0].title : '';
+            var identificador = nome.slice(0, nome.indexOf('(') - 1).trim();
+            context.commit('atualizarIdPastaDestino', dados.idPastaDestino);
+            context.commit('atualizarPlanilhas', dados.planilhas || []);
+            context.commit('atualizarIdentificador', identificador);
+            google.script.run
+            .withSuccessHandler(function(credenciais) {
+                context.commit('atualizarToken', credenciais.token);
+                context.commit('atualizarDeveloperKey', credenciais.developerKey);
+                context.commit('atualizarStatusInicializacao', false);
+            })
+            .withFailureHandler(function(err) {
+                context.commit('atualizarStatusInicializacao', false);
+                context.commit('atualizarFalhaInicializacao', true);
+            })
+            .obterCredenciais();
+        },
+        adicionarPlanilhas(context, planilhas) {
+            var lista = Array.prototype.concat(context.state.planilhas, planilhas).filter(function(item, idx, arr) {
+                return idx === arr.findIndex(m => m.id === item.id);
+            });
+            context.commit('atualizarPlanilhas', lista);
+        },
+        excluirPlanilha(context, id) {
+            var lista = context.state.planilhas.filter(x => x.id !== id);
+            context.commit('atualizarPlanilhas', lista);
+        },
+        adicionarModelos(context, modelos) {
+            var lista = Array.prototype.concat(context.state.modelos, modelos).filter(function(item, idx, arr) {
+                return idx === arr.findIndex(m => m.id === item.id);
+            });
+            context.commit('atualizarModelos', lista);
+        },
+        excluirModelo(context, id) {
+            var lista = context.state.modelos.filter(x => x.id !== id);
+            context.commit('atualizarModelos', lista);
+        },
+        criarDocumentos(context) {
+            context.commit('atualizarStatusCarregando', true);
+            var dados = {
+                identificador: context.state.identificador,
+                planilhas: context.state.planilhas,
+                idPastaDestino: context.state.idPastaDestino,
+                modelos: context.state.modelos
+            }
+            google.script.run
+            .withSuccessHandler(function(urls) {
+                var payload = {
+                    mostrarAviso: true,
+                    mensagemAviso: 'Documentos criados com sucesso',
+                    corAviso: '#333'
+                }
+                if (context.state.opcaoAbrir === true) {
+                    urls.forEach(function(url) {
+                        window.open(url, '_blank');
+                    })
+                }
+                context.commit('atualizarStatusCarregando', false);
+                context.commit('atualizarAviso', payload);
+            })
+            .withFailureHandler(function(err) {
+                var payload = {
+                    mostrarAviso: true,
+                    mensagemAviso: context.state.modelos.length > 1 ? 'Falha ao criar os documentos' : 'Falha ao criar o documento',
+                    corAviso: 'red'
+                }
+                context.commit('atualizarStatusCarregando', false);
+                context.commit('atualizarAviso', payload);
+            })
+            .criarDocumentos(dados);
+        }
+    }
+});
+
+</script>

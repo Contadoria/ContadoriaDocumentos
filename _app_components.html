@@ -1,0 +1,241 @@
+<script>
+
+Vue.component('ui-planilhas', {
+    template: `
+        <v-card raised class="ma-3 pa-0">
+            <ui-google-picker
+                type="SPREADSHEETS"
+                title="Selecione uma ou mais planilhas"
+                :multiselect="true"
+                :hide-nav="true"
+                :select-folder="false"
+                folder-id="root"
+                :developer-key="key"
+                :token="token"
+                :origin="$google.script.host.origin"
+                :visible="abrirPicker"
+                @picked="adicionarPlanilhas($event)"
+                @cancelled="abrirPicker = false">
+            </ui-google-picker>
+            <v-toolbar color="green darken-3" dark dense>
+                <v-toolbar-title>
+                    {{ title }}
+                </v-toolbar-title>
+                <v-btn
+                    color="light-green darken-1"
+                    dark
+                    absolute
+                    bottom
+                    right
+                    fab
+                    @click.native="abrirPicker = true">
+                    <v-icon>folder</v-icon>
+                </v-btn>            
+            </v-toolbar>
+            <ui-file-list v-if="planilhas.length > 0"
+                class="mt-4"
+                :files="planilhas"
+                :removable="true"
+                @removed="excluirPlanilha($event)">
+            </ui-file-list>
+            <v-card-text v-else>
+                <p class="ma-1 pa-1 grey--text">Nenhuma planilha selecionada</p>
+            </v-card-text>
+        </v-card>
+        `,
+    data() {
+        return {
+            abrirPicker: false,
+        }
+    },
+    computed: {
+        key() {
+            return this.$store.state.developerKey;
+        },
+        token() {
+            return this.$store.state.token;
+        },
+        planilhas() {
+            return this.$store.state.planilhas;
+        },
+        title() {
+            return this.planilhas.length === 0 ? 'Selecione uma ou mais planilhas' : (this.planilhas.length > 1 ? 'Planilhas selecionadas' : 'Planilha selecionada');
+        }
+    },
+    methods: {
+        adicionarPlanilhas(dados) {
+            this.$store.dispatch('adicionarPlanilhas', dados);
+            this.abrirPicker = false; 
+        },
+        excluirPlanilha(id) {
+            this.$store.dispatch('excluirPlanilha', id);
+        }
+    }
+});
+
+Vue.component('ui-modelos', {
+    template: `
+        <v-card raised class="ma-3 pa-0">
+            <ui-google-picker
+                type="DOCUMENTS"
+                title="Selecione um ou mais modelos"
+                :multiselect="true"
+                :hide-nav="true"
+                :select-folder="false"
+                folder-id="root"
+                :developer-key="key"
+                :token="token"
+                :origin="$google.script.host.origin"
+                :visible="abrirPicker"
+                @picked="adicionarModelos($event)"
+                @cancelled="abrirPicker = false">
+            </ui-google-picker>
+            <v-toolbar color="blue darken-3" dark dense>
+                <v-toolbar-title>
+                    {{ title }}
+                </v-toolbar-title>
+                <v-btn
+                    color="light-blue darken-1"
+                    dark
+                    absolute
+                    bottom
+                    right
+                    fab
+                    @click="abrirPicker = true">
+                    <v-icon>folder</v-icon>
+                </v-btn>            
+            </v-toolbar>
+            <ui-file-list v-if="modelos.length > 0"
+                class="mt-4"
+                :files="modelos"
+                :removable="true"
+                @removed="excluirModelo($event)">
+            </ui-file-list>
+            <v-card-text v-else>
+                <p class="ma-1 pa-1 grey--text">Nenhum modelo selecionado</p>
+            </v-card-text>
+        </v-card>
+        `,
+    data() {
+        return {
+            abrirPicker: false,
+        }
+    },
+    computed: {
+        key() {
+            return this.$store.state.developerKey;
+        },
+        token() {
+            return this.$store.state.token;
+        },
+        modelos() {
+            return this.$store.state.modelos;
+        },
+        title() {
+            return this.modelos.length === 0 ? 'Selecione um ou mais modelos' : (this.modelos.length > 1 ? 'Modelos selecionados' : 'Modelo selecionado');
+        }
+    },
+    methods: {
+        adicionarModelos(dados) {
+            this.$store.dispatch('adicionarModelos', dados);
+            this.abrirPicker = false; 
+        },
+        excluirModelo(id) {
+            this.$store.dispatch('excluirModelo', id);
+        }
+    }
+});
+
+Vue.component('ui-form', {
+    template: `
+        <v-form ref="form" v-model="valid">
+            <v-card raised class="ma-3 pa-0">
+                <v-toolbar color="grey darken-2" dark dense>
+                    <v-toolbar-title>
+                        Dados para criação dos documentos
+                    </v-toolbar-title>
+                </v-toolbar>
+                <v-layout row class="ma-0 pa-0">
+                    <v-flex class="ml-4 mr-4 mt-4 pa-0">
+                        <v-text-field
+                            label="Identificador"
+                            v-model.trim="identificador"
+                            :rules="[rules.required, rules.maxChars, rules.fileName]"
+                            :counter="30"
+                            prepend-icon="fingerprint"
+                            required
+                            @keydown.native.enter.prevent="x => false"
+                            @keyup.native.enter.prevent="x => false">
+                        </v-text-field>
+                    </v-flex>
+                </v-layout>
+                <v-layout row class="ma-0 pa-0">
+                    <v-flex class="ma-0 pa-0">
+                        <v-switch class="ml-4" color="blue darken-1" label="Abrir automaticamente" v-model="opcaoAbrir"></v-switch>
+                    </v-flex>
+                </v-layout>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                        flat
+                        class="ma-2"
+                        :class="{ 'blue--text darken-1': ready, 'red--text': !ready }"
+                        :loading="carregando"
+                        :disabled="carregando"
+                        @click.native="criar()">
+                        Criar
+                        <v-icon right>library_add</v-icon>
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-form>
+        `,
+    data() {
+        return {
+            valid: false,
+            abrirPicker: false,
+            rules: {
+                required: (v) => !!v || 'Você deve informar um nome de arquivo',
+                fileName: (v) => {
+                    const pattern1 = /^(\w)$/
+                    const pattern2 = /^(\w+[\w*,\s,\.,\-]*[\w,\s]+)$/
+                    return pattern1.test(v) || pattern2.test(v) || 'Você deve iniciar e terminar com letras, números e/ou underline. Use espaços, traços e pontos somente no meio, não nos extremos.'
+                },
+                maxChars: (v) => v.length <= 30 || 'O nome do arquivo deve conter no máximo 30 caracteres',
+            }
+        }
+    },
+    computed: {
+        carregando() {
+            return this.$store.state.carregando;
+        },
+        identificador: {
+            get() {
+                return this.$store.state.identificador;
+            },
+            set(val) {
+                this.$store.commit('atualizarIdentificador', val);
+            }
+        },
+        opcaoAbrir: {
+            get() {
+                return this.$store.state.opcaoAbrir;
+            },
+            set(val) {
+                this.$store.commit('atualizarOpcaoAbrir', val);
+            }
+        },
+        ready() {
+            return this.valid && this.$store.state.planilhas.length > 0 && this.$store.state.modelos.length > 0;
+        }
+    },
+    methods: {
+        criar() {
+            if (this.valid) {
+                this.$store.dispatch('criarDocumentos');
+            }
+        }
+    }
+});
+
+</script>

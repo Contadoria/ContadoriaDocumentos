@@ -1,0 +1,104 @@
+<script>
+
+new Vue({
+    el: '#app',
+    store,
+    template: `
+        <v-app class="grey lighten-4">
+            <v-snackbar bottom left dark :color="corAviso" v-model="mostrarAviso">
+                {{ mensagemAviso }}
+            </v-snackbar>
+            <v-container v-if="mostrarInicializacao" style="display: flex; justify-content: center; align-items: center;">
+                <v-progress-circular indeterminate :size="50" class="primary--text"></v-progress-circular>
+            </v-container>
+            <v-container v-else-if="mostrarPaginaErro">
+                <ui-info type="error" :title="document.title" subtitle="Ocorreu uma falha na comunicação com o servidor. :-(">
+                    <p class="text-xs-center body-2">
+                        Tente recarregar a página. Se o problema persistir, comunique-se conosco, por meio deste <a target="_blank" :href="urlIssues">link</a>
+                    </p>
+                </ui-info>
+            </v-container>
+            <div v-else>
+                <v-toolbar class="indigo" fixed>
+                    <ui-logo></ui-logo>
+                    <v-spacer></v-spacer>
+                    <h2 class="white--text">
+                        Criar Documentos
+                    </h2>
+                    <v-menu offset-y left bottom>                    
+                        <v-btn icon slot="activator" dark>
+                            <v-icon>more_vert</v-icon>
+                        </v-btn>
+                        <v-list>
+                            <v-list-tile avatar @click="abrirAjuda()">
+                                <v-list-tile-avatar><v-icon>help</v-icon></v-list-tile-avatar>
+                                <v-list-tile-title>Obter ajuda</v-list-tile-title>
+                            </v-list-tile>
+                            <v-list-tile avatar @click="abrirIssues()">
+                                <v-list-tile-avatar><v-icon>bug_report</v-icon></v-list-tile-avatar>
+                                <v-list-tile-title>Reportar um bug</v-list-tile-title>
+                            </v-list-tile>
+                        </v-list>
+                    </v-menu>
+                </v-toolbar>
+                <v-content fluid style="padding-top: 70px">
+                    <v-layout row wrap>
+                        <v-flex xs12 sm12 md6 lg6 xl6>
+                            <ui-planilhas></ui-planilhas>
+                            <ui-modelos></ui-modelos>
+                        </v-flex>
+                        <v-flex xs12 sm12 md6 lg6 xl6>
+                            <ui-form></ui-form>
+                        </v-flex>
+                    </v-layout>
+                </v-content>
+            </div>
+        </v-app>
+    `,
+    data() {
+        return {
+            pickerCarregado: false
+        }
+    },
+    computed: {
+        inicializando() {
+            return this.$store.state.inicializando;
+        },
+        carregando() {
+            return this.$store.state.carregando;
+        },
+        mostrarAviso: {
+            get() {
+                return this.$store.state.mostrarAviso;
+            },
+            set(val) {
+                this.$store.commit('atualizarVisualizacaoAviso', val);
+            }
+        },
+        mensagemAviso() {
+            return this.$store.state.mensagemAviso;
+        },
+        corAviso() {
+            return this.$store.state.corAviso;
+        },
+        mostrarInicializacao() {
+            return this.$store.state.inicializando;
+        },
+        mostrarPaginaErro() {
+            return this.$store.state.falhaInicializacao;
+        },
+    },
+    methods: {
+        abrirAjuda() {
+            window.open("https:\/\/contadoria.github.io\/Tutoriais\/", "_blank");
+        },
+        abrirIssues() {
+            window.open("https:\/\/script.google.com\/macros\/s\/AKfycbwMQVo2G0pvhvq-aadi9LOK8UUYn2eK-36nz7jZVyqTcZ06Ncc\/exec", "_blank");
+        }
+    },
+    mounted() {
+        this.$store.dispatch('inicializar', this.$dadosDrive);
+    }
+});
+
+</script>

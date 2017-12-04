@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <base target="_top">
+        <title><?!= Config_.UI.TITULO; ?></title>
+        <?!= incluir('_app_styles'); ?>
+        <script>
+            <? if (dadosDrive !== null && dadosDrive !== undefined) { ?>
+                var dadosDrive = JSON.parse('<?= dadosDrive ?>');
+            <? } else { ?>
+                var dadosDrive = {};
+            <? } ?>
+        </script>
+    </head>
+    <body>
+        <div id="app"></div>
+
+        <?!= incluir('_app_scripts'); ?>
+        <?!= incluir('_app_config'); ?>
+        <?!= incluir('_app_components_common'); ?>
+        <?!= incluir('_app_components'); ?>
+        <?!= incluir('_app'); ?>
+    </body>
+</html>
+
+
